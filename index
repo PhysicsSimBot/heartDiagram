@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heart Anatomy Explorer - Biology 20</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        
+        .part {
+            fill: transparent;
+            stroke: transparent;
+            stroke-width: 2.5;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        /* Interactive States */
+        .part:hover {
+            fill: rgba(255, 255, 255, 0.2);
+            stroke: rgba(255, 255, 255, 0.8);
+        }
+        
+        .part.selected-pulse {
+            stroke: #3b82f6;
+            stroke-width: 4;
+            animation: pulse-border 1.5s infinite;
+        }
+
+        .part.solved-deoxygenated {
+            fill: rgba(2, 132, 199, 0.4);
+            stroke: #0284c7;
+            cursor: default;
+        }
+        
+        .part.solved-oxygenated {
+            fill: rgba(225, 29, 72, 0.4);
+            stroke: #e11d48;
+            cursor: default;
+        }
+
+        .part.solved-neutral {
+            fill: rgba(100, 116, 139, 0.4);
+            stroke: #475569;
+            cursor: default;
+        }
+        
+        html { scroll-behavior: smooth; }
+
+        @keyframes pulse-border {
+            0% { filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.5)); }
+            50% { filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.8)); }
+            100% { filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.5)); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+        
+        .error-shake {
+            animation: shake 0.4s ease-in-out;
+            border-color: #ef4444 !important;
+            background-color: #fef2f2 !important;
+            color: #b91c1c !important;
+        }
+        
+        .svg-label {
+            font-size: 14px;
+            font-weight: 700;
+            fill: #1e293b;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        .svg-label.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 pb-16">
+
+<div class="max-w-6xl mx-auto px-4 py-8">
+    <header class="mb-8 text-center max-w-3xl mx-auto">
+        <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight mb-3">Heart Anatomy Explorer</h1>
+        <p class="text-lg text-slate-600">Alberta Biology 20 Interactive Learning Tool</p>
+        <div id="progress-bar-container" class="mt-6 w-full bg-slate-200 rounded-full h-3 max-w-md mx-auto overflow-hidden">
+            <div id="progress-bar" class="bg-blue-600 h-3 rounded-full transition-all duration-700 w-0"></div>
+        </div>
+        <p class="text-sm text-slate-500 mt-2"><span id="solved-count">0</span> / 11 Structures Labeled</p>
+    </header>
+
+    <!-- Main Interactive Area -->
+    <main class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        
+        <!-- Interactive Diagram -->
+        <div class="lg:col-span-2 bg-[#d7c4b7] rounded-3xl shadow-lg border border-slate-100 p-4 md:p-8 flex justify-center relative min-h-[500px]">
+            <!-- Image-based Heart Diagram with SVG Clickable Overlay -->
+            <div class="relative w-full max-w-2xl select-none" id="diagram-wrapper">
+                
+                <!-- Fetched and scrubbed SVG will go here -->
+                <div id="base-image-container" class="w-full">
+                    <div class="animate-pulse flex space-x-4 p-12 justify-center items-center text-slate-400">Loading accurate anatomical diagram...</div>
+                </div>
+                
+                <!-- SVG Overlay precisely matching the image below -->
+                <svg id="heart-diagram" viewBox="0 0 400 400" class="absolute top-0 left-0 w-full h-full z-10" preserveAspectRatio="xMidYMid meet">
+                    
+                    <!-- Vena Cava -->
+                    <!-- Superior & Inferior mapped to the blue vessels on anatomical right -->
+                    <path id="vena_cava" class="part" d="M 80 80 L 120 80 L 120 120 L 80 120 Z M 100 280 L 140 290 L 130 350 L 90 350 Z" />
+                    
+                    <!-- Right Atrium -->
+                    <path id="right_atrium" class="part" d="M 90 140 Q 60 180 80 230 L 130 230 L 140 180 Z" />
+                    
+                    <!-- Tricuspid Valve -->
+                    <rect id="tricuspid_valve" class="part" transform="rotate(-15 110 240)" x="100" y="235" width="40" height="15" rx="4" />
+                    
+                    <!-- Right Ventricle -->
+                    <path id="right_ventricle" class="part" d="M 90 250 Q 110 330 150 360 Q 180 370 200 360 L 170 250 Z" />
+                    
+                    <!-- Septum -->
+                    <!-- Thick wall section -->
+                    <path id="septum" class="part" d="M 175 220 L 210 220 L 220 370 L 190 365 Z" />
+                    
+                    <!-- Left Atrium -->
+                    <path id="left_atrium" class="part" d="M 230 160 Q 260 150 280 170 L 280 210 L 240 210 Z" />
+                    
+                    <!-- Bicuspid (Mitral) Valve -->
+                    <rect id="bicuspid_valve" class="part" transform="rotate(15 250 220)" x="235" y="215" width="45" height="15" rx="4" />
+                    
+                    <!-- Left Ventricle -->
+                    <path id="left_ventricle" class="part" d="M 220 230 L 280 230 Q 300 300 250 370 Q 230 390 210 380 L 200 365 L 220 360 Z" />
+                    
+                    <!-- Pulmonary Artery -->
+                    <!-- Main blue trunk exiting right ventricle -->
+                    <path id="pulmonary_artery" class="part" d="M 150 200 Q 155 120 220 110 L 240 130 Q 180 140 180 200 Z M 220 110 L 270 110 L 270 140 L 240 130 Z" />
+
+                    <!-- Aorta -->
+                    <!-- Red arch -->
+                    <path id="aorta" class="part" d="M 180 130 Q 170 70 210 50 Q 250 40 280 80 L 250 100 Q 230 70 200 80 L 190 140 Z" />
+                    
+                    <!-- Pulmonary Veins -->
+                    <!-- Red veins entering left atrium -->
+                    <path id="pulmonary_veins" class="part" d="M 285 155 L 320 155 L 320 175 L 285 175 Z" />
+                    <path id="pulmonary_veins_2" class="part" d="M 285 180 L 320 180 L 320 200 L 285 200 Z" />
+                    <path id="pulmonary_veins_3" class="part" d="M 80 155 L 50 155 L 50 175 L 80 175 Z" />
+                    <path id="pulmonary_veins_4" class="part" d="M 80 180 L 50 180 L 50 200 L 80 200 Z" />
+
+                    <!-- Success Text Labels (Hidden initially) -->
+                    <!-- Adjusted positions for the new image map -->
+                    <text x="75" y="195" class="svg-label" data-part="right_atrium">Right Atrium</text>
+                    <text x="120" y="320" class="svg-label" data-part="right_ventricle">Right Ventricle</text>
+                    <text x="250" y="180" class="svg-label" data-part="left_atrium">Left Atrium</text>
+                    <text x="240" y="320" class="svg-label" data-part="left_ventricle">Left Ventricle</text>
+                    <text x="195" y="270" class="svg-label" data-part="septum" writing-mode="vertical-rl">Septum</text>
+                    <text x="95" y="60" class="svg-label" data-part="vena_cava">Vena Cava</text>
+                    <text x="210" y="35" class="svg-label" data-part="aorta">Aorta</text>
+                    <text x="180" y="105" class="svg-label" data-part="pulmonary_artery">Pulm. Artery</text>
+                    <text x="290" y="145" class="svg-label" data-part="pulmonary_veins">Pulm. Veins</text>
+                    <text x="80" y="250" class="svg-label" data-part="tricuspid_valve" font-size="10">Tricuspid</text>
+                    <text x="260" y="240" class="svg-label" data-part="bicuspid_valve" font-size="10">Bicuspid</text>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Word Bank -->
+        <div class="lg:col-span-1 bg-white rounded-3xl shadow-lg border border-slate-100 p-6 flex flex-col h-full relative z-10">
+            <h2 class="text-xl font-bold text-slate-800 mb-2">Word Bank</h2>
+            <p class="text-sm text-slate-500 mb-6 pb-4 border-b border-slate-100">Click a term to select it, then click its corresponding structure on the diagram.</p>
+            
+            <div id="word-bank" class="flex flex-wrap gap-2">
+                <!-- Dynamically populated buttons -->
+            </div>
+            
+            <div id="status-message" class="mt-8 text-center text-sm font-medium h-8 flex items-center justify-center rounded-lg transition-colors p-3 hidden">
+                <!-- Dynamic feedback text -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Question Panel (Hidden until a part is correctly clicked) -->
+    <section id="mc-panel" class="mt-8 bg-white border border-slate-200 rounded-3xl shadow-2xl p-8 max-w-3xl mx-auto hidden transform transition-all duration-500">
+        <div class="flex items-center gap-4 mb-6">
+            <div id="q-icon" class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-sm text-white">🫀</div>
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Structure Identified</p>
+                <h3 id="q-title" class="text-2xl font-bold text-slate-800">Part Name</h3>
+            </div>
+        </div>
+        
+        <div class="bg-slate-50 rounded-2xl p-6 border border-slate-100 mb-6">
+            <p id="q-text" class="text-lg font-medium text-slate-700 leading-relaxed">Question text goes here?</p>
+        </div>
+        
+        <div id="q-options" class="flex flex-col gap-3">
+            <!-- Buttons injected here -->
+        </div>
+    </section>
+
+    <!-- Completion Modal -->
+    <div id="completion-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center px-4">
+        <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center transform scale-95 opacity-0 transition-all duration-500" id="modal-content">
+            <div class="text-6xl mb-4">🏆</div>
+            <h2 class="text-3xl font-extrabold text-slate-800 mb-3">Mastery Achieved!</h2>
+            <p class="text-slate-600 mb-8">You have successfully labeled the heart's anatomy and proven your knowledge of its functions.</p>
+            <button onclick="resetApp()" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all w-full">Restart Explorer</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // System Data: Alberta Bio 20 Focus on Structure & Function & Blood Flow
+    const heartData = {
+        right_atrium: {
+            name: "Right Atrium",
+            solvedStyle: "solved-deoxygenated",
+            iconColor: "bg-sky-500",
+            questions: [
+                { q: "What is the primary function of the Right Atrium in the circulatory system?", opts: ["Receives deoxygenated blood returning from the systemic circuit.", "Pumps oxygenated blood out to the systemic circuit.", "Receives oxygenated blood returning from the lungs.", "Pumps deoxygenated blood directly into the lungs."], correct: 0 },
+                { q: "Blood enters the Right Atrium directly from which major vessel(s)?", opts: ["Vena Cava (Superior & Inferior)", "Pulmonary Vein", "Aorta", "Pulmonary Artery"], correct: 0 }
+            ]
+        },
+        right_ventricle: {
+            name: "Right Ventricle",
+            solvedStyle: "solved-deoxygenated",
+            iconColor: "bg-sky-600",
+            questions: [
+                { q: "Where does the Right Ventricle pump blood to?", opts: ["The lungs, for gas exchange.", "The body tissues, to deliver oxygen.", "The left atrium, via pulmonary veins.", "The right atrium, via the tricuspid valve."], correct: 0 },
+                { q: "Because it only pumps blood to the nearby lungs, the Right Ventricle's muscular wall is:", opts: ["Thinner than the left ventricle's.", "The thickest of all heart chambers.", "Composed entirely of skeletal muscle.", "Non-existent; pressure regulates blood flow."], correct: 0 }
+            ]
+        },
+        left_atrium: {
+            name: "Left Atrium",
+            solvedStyle: "solved-oxygenated",
+            iconColor: "bg-red-400",
+            questions: [
+                { q: "What type of blood enters the Left Atrium?", opts: ["Oxygen-rich blood returning from the lungs.", "Deoxygenated blood returning from the body.", "Mixed blood moving across the septum.", "Lymphatic fluid from the capillary beds."], correct: 0 },
+                { q: "When the Left Atrium contracts, blood passes through which valve?", opts: ["Bicuspid (Mitral) Valve", "Tricuspid Valve", "Aortic Semilunar Valve", "Pulmonary Semilunar Valve"], correct: 0 }
+            ]
+        },
+        left_ventricle: {
+            name: "Left Ventricle",
+            solvedStyle: "solved-oxygenated",
+            iconColor: "bg-red-600",
+            questions: [
+                { q: "Why does this chamber have the thickest muscular wall?", opts: ["It must generate high pressure to pump blood to the entire somatic body.", "It receives blood at the highest possible pressure.", "It stores a larger volume of blood than the other three chambers.", "It acts as the heart's primary pacemaking center (SA Node)."], correct: 0 },
+                { q: "When the Left Ventricle forcefully contracts, blood is ejected directly into the:", opts: ["Aorta", "Pulmonary Artery", "Left Atrium", "Vena Cava"], correct: 0 }
+            ]
+        },
+        aorta: {
+            name: "Aorta",
+            solvedStyle: "solved-oxygenated",
+            iconColor: "bg-red-700",
+            questions: [
+                { q: "What is the function of the Aorta?", opts: ["It distributes oxygenated blood from the heart to the rest of the body.", "It returns deoxygenated blood to the right atrium.", "It carries deoxygenated blood to the lungs.", "It acts as a temporary reservoir for blood plasma."], correct: 0 },
+                { q: "As the largest artery in the body, the Aorta must have walls that are:", opts: ["Highly elastic and thick to handle tremendous pressure.", "Thin and permeable to allow for rapid gas exchange.", "Rigid and calcified to prevent collapsing.", "Lined specifically with skeletal muscle."], correct: 0 }
+            ]
+        },
+        pulmonary_artery: {
+            name: "Pulmonary Artery",
+            solvedStyle: "solved-deoxygenated",
+            iconColor: "bg-sky-700",
+            questions: [
+                { q: "The Pulmonary Artery is unique among most arteries because:", opts: ["It carries deoxygenated blood.", "It strictly relies on skeletal muscle to move blood.", "It is the only connection to venous systems without capillaries.", "It carries strictly oxygenated blood."], correct: 0 },
+                { q: "Blood flowing through the Pulmonary Artery is headed directly toward the:", opts: ["Lungs", "Left Atrium", "Liver", "Superior Vena Cava"], correct: 0 }
+            ]
+        },
+        pulmonary_veins: {
+            name: "Pulmonary Veins",
+            solvedStyle: "solved-oxygenated",
+            iconColor: "bg-red-300",
+            questions: [
+                { q: "What makes the Pulmonary Veins unique compared to most other veins?", opts: ["They return oxygen-rich blood.", "They strictly do not contain any valves.", "They carry blood away from the heart.", "They possess walls thicker than the aorta."], correct: 0 },
+                { q: "The Pulmonary Veins empty their freshly oxygenated contents into which chamber?", opts: ["Left Atrium", "Right Atrium", "Left Ventricle", "Right Ventricle"], correct: 0 }
+            ]
+        },
+        vena_cava: {
+            name: "Vena Cava",
+            solvedStyle: "solved-deoxygenated",
+            iconColor: "bg-sky-800",
+            questions: [
+                { q: "What is the prominent role of the Vena Cava (Superior and Inferior)?", opts: ["To return deoxygenated blood from the body tissues to the Right Atrium.", "To carry oxygenated blood from the lungs to the Left Atrium.", "To supply the cardiac muscle with fresh oxygenated blood.", "To filter impurities before blood enters systemic circulation."], correct: 0 },
+                { q: "Blood pressure in the Vena Cava as it returns to the heart is relatively:", opts: ["Low, returning via venous return mechanisms.", "Extremely high, needing to overcome gravity.", "Constantly matching the pressure in the Aorta.", "The highest found anywhere in the human body."], correct: 0 }
+            ]
+        },
+        septum: {
+            name: "Septum",
+            solvedStyle: "solved-neutral",
+            iconColor: "bg-slate-500",
+            questions: [
+                { q: "What is the vital functional purpose of the Septum?", opts: ["It physically separates the right and left sides, preventing the mixing of oxygenated & deoxygenated blood.", "It generates the primary electrical impulses that dictate resting heart rate.", "It anchors the chordae tendineae to the atrial walls.", "It secretes pericardial fluid to reduce mechanical friction."], correct: 0 },
+                { q: "A defect (hole) in the Ventricular Septum would immediately cause:", opts: ["Mixing of oxygen-rich and oxygen-poor blood reducing efficiency.", "An excessive heart rate, leading to cardiac arrest.", "Complete blockage of all blood attempting to leave the heart.", "Total failure of the semilunar valves to close."], correct: 0 }
+            ]
+        },
+        tricuspid_valve: {
+            name: "Tricuspid Valve",
+            solvedStyle: "solved-neutral",
+            iconColor: "bg-slate-600",
+            questions: [
+                { q: "The Tricuspid Valve physically prevents the backflow of blood into the:", opts: ["Right Atrium", "Right Ventricle", "Left Atrium", "Pulmonary Artery"], correct: 0 },
+                { q: "This Atrioventricular (AV) valve opens passively when:", opts: ["Atrial pressure becomes greater than ventricular pressure.", "Ventricular pressure is forcefully elevated during systole.", "The heart is entirely depleted of blood.", "The lungs expand excessively during deep inhalation."], correct: 0 }
+            ]
+        },
+        bicuspid_valve: {
+            name: "Bicuspid (Mitral) Valve",
+            solvedStyle: "solved-neutral",
+            iconColor: "bg-slate-700",
+            questions: [
+                { q: "The Bicuspid Valve is situated exclusively between the:", opts: ["Left Atrium and Left Ventricle", "Right Atrium and Right Ventricle", "Left Ventricle and Aorta", "Right Ventricle and Pulmonary Artery"], correct: 0 },
+                { q: "Failure of the Bicuspid Valve to snap shut properly can result in blood regurgitating (flowing backwards) into the:", opts: ["Left Atrium, potentially causing pulmonary congestion.", "Right Atrium, dramatically affecting systemic fluid volume.", "Aorta, causing excessively low blood pressure.", "Vena Cava, causing fainting spells."], correct: 0 }
+            ]
+        }
+    };
+
+    function fetchDiagram() {
+        fetch('https://upload.wikimedia.org/wikipedia/commons/e/e5/Diagram_of_the_human_heart_%28cropped%29.svg')
+            .then(res => res.text())
+            .then(svgText => {
+                // Scrub labels (Remove all <text> and <tspan> tags)
+                let scrubbed = svgText.replace(/<text[\s\S]*?<\/text>/gi, '');
+                scrubbed = scrubbed.replace(/<tspan[\s\S]*?<\/tspan>/gi, '');
+                // Attempt to remove simple pointer lines (stroke="#000000" fill="none") usually pointing to text
+                scrubbed = scrubbed.replace(/<path[^>]*stroke="#000000"[^>]*fill="none"[^>]*\/>/gi, '');
+                
+                const container = document.getElementById('base-image-container');
+                container.innerHTML = scrubbed;
+                
+                const svgEl = container.querySelector('svg');
+                if (svgEl) {
+                    // Apply display classes to match exactly as an image would
+                    svgEl.classList.add('w-full', 'h-auto', 'drop-shadow-xl');
+                    svgEl.style.pointerEvents = 'none'; // Prevent base SVG from capturing clicks
+                }
+            })
+            .catch(err => {
+                document.getElementById('base-image-container').innerHTML = `<div class="p-8 text-center text-red-500 font-bold">Failed to load diagram: ${err.message}</div>`;
+                console.error("Diagram Load Error:", err);
+            });
+    }
+
+    // State & Variables
+    const state = {
+        mode: 'LABELING', // LABELING or QUESTION
+        selectedWordKey: null,
+        solvedKeys: new Set(),
+        currentQuizKey: null,
+        qIndex: {} // Tracks which question the user is on for each part
+    };
+
+    const wordBankEl = document.getElementById('word-bank');
+    const svgParts = document.querySelectorAll('.part');
+    const mcPanel = document.getElementById('mc-panel');
+    const statusMsg = document.getElementById('status-message');
+
+    // Initialization
+    function init() {
+        fetchDiagram();
+        renderWordBank();
+        
+        // Initialize Question indices
+        Object.keys(heartData).forEach(key => {
+            state.qIndex[key] = 0;
+            // Treat special composite elements in the SVG
+            if(key === 'pulmonary_veins') {
+                document.getElementById('pulmonary_veins_2').onclick = () => handleSvgClick('pulmonary_veins');
+                document.getElementById('pulmonary_veins_3').onclick = () => handleSvgClick('pulmonary_veins');
+                document.getElementById('pulmonary_veins_4').onclick = () => handleSvgClick('pulmonary_veins');
+            }
+        });
+
+        // Add Listeners to diagram
+        svgParts.forEach(part => {
+            // Ignore the secondary veins which have custom wrappers above
+            if(part.id === 'pulmonary_veins_2' || part.id === 'pulmonary_veins_3' || part.id === 'pulmonary_veins_4') return; 
+
+            part.onclick = () => handleSvgClick(part.id);
+            
+            part.onmouseenter = () => {
+                if (state.mode === 'LABELING' && state.selectedWordKey && !state.solvedKeys.has(part.id)) {
+                    // Visual cue they can click here
+                    part.classList.add('selected-pulse');
+                }
+            };
+            
+            part.onmouseleave = () => {
+                part.classList.remove('selected-pulse');
+            };
+        });
+    }
+
+    function renderWordBank() {
+        wordBankEl.innerHTML = '';
+        
+        // Create an array to allow shuffling or structured layout. 
+        // For education, randomly sorting forces reading rather than pattern matching.
+        let keys = Object.keys(heartData);
+        keys = keys.sort(() => Math.random() - 0.5);
+
+        keys.forEach(key => {
+            const btn = document.createElement('button');
+            btn.id = `wb-${key}`;
+            const isSolved = state.solvedKeys.has(key);
+            
+            btn.className = `px-4 py-2 text-sm md:text-base font-medium rounded-xl border-2 transition-all duration-200 
+                ${isSolved ? 'bg-slate-100 text-slate-400 border-slate-200 opacity-50 cursor-not-allowed' : 
+                  state.selectedWordKey === key ? 'bg-blue-50 text-blue-700 border-blue-500 shadow-md transform scale-105' : 
+                  'bg-white text-slate-700 border-slate-200 shadow-sm hover:border-slate-300 hover:bg-slate-50'}`;
+            
+            btn.textContent = heartData[key].name;
+            btn.disabled = isSolved;
+            
+            if (!isSolved) {
+                btn.onclick = () => {
+                    if (state.mode !== 'LABELING') return;
+                    state.selectedWordKey = state.selectedWordKey === key ? null : key;
+                    renderWordBank(); // update styles
+                    showStatus(`Click the <strong>${heartData[key].name}</strong> on the diagram.`, "text-blue-700 bg-blue-50");
+                };
+            }
+            
+            wordBankEl.appendChild(btn);
+        });
+    }
+
+    function handleSvgClick(partId) {
+        if (state.mode !== 'LABELING') return;
+        if (!state.selectedWordKey) {
+            showStatus('Please select a term from the Word Bank first!', 'text-amber-700 bg-amber-50');
+            return;
+        }
+        
+        if (state.solvedKeys.has(partId)) return;
+
+        // Check Match
+        if (partId === state.selectedWordKey) {
+            // CORRECT MATCH!
+            showStatus('Correct Structure! Now prove its function.', 'text-green-700 bg-green-50');
+            
+            // Temporary highlight
+            const el = document.getElementById(partId);
+            el.classList.add('selected-pulse');
+            if(partId === 'pulmonary_veins') {
+                document.getElementById('pulmonary_veins_2').classList.add('selected-pulse');
+                document.getElementById('pulmonary_veins_3').classList.add('selected-pulse');
+                document.getElementById('pulmonary_veins_4').classList.add('selected-pulse');
+            }
+
+            // Shift Mode
+            state.mode = 'QUESTION';
+            state.currentQuizKey = partId;
+            
+            // Clean UI & Launch Quiz
+            state.selectedWordKey = null;
+            renderWordBank(); 
+            
+            setTimeout(() => {
+                el.classList.remove('selected-pulse');
+                if(partId === 'pulmonary_veins') {
+                    document.getElementById('pulmonary_veins_2').classList.remove('selected-pulse');
+                    document.getElementById('pulmonary_veins_3').classList.remove('selected-pulse');
+                    document.getElementById('pulmonary_veins_4').classList.remove('selected-pulse');
+                }
+                launchQuiz(partId);
+            }, 500);
+
+        } else {
+            // MISMATCH
+            const el = document.getElementById(partId);
+            const btn = document.getElementById(`wb-${state.selectedWordKey}`);
+            
+            el.style.stroke = "#ef4444";
+            btn.classList.add("error-shake");
+            
+            showStatus('Incorrect structure. Try again!', 'text-red-700 bg-red-50');
+
+            setTimeout(() => {
+                el.style.stroke = "";
+                btn.classList.remove("error-shake");
+            }, 600);
+        }
+    }
+
+    function launchQuiz(key) {
+        const data = heartData[key];
+        const qData = data.questions[state.qIndex[key]];
+
+        // Setup Panel
+        document.getElementById('q-title').textContent = data.name;
+        document.getElementById('q-icon').className = `w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-sm text-white ${data.iconColor}`;
+        document.getElementById('q-text').textContent = qData.q;
+        
+        // Prepare Answers (Shuffle)
+        const optsContainer = document.getElementById('q-options');
+        optsContainer.innerHTML = '';
+        
+        let validOptions = qData.opts.map((txt, index) => ({ txt, isCorrect: index === qData.correct }));
+        // Shuffle options
+        validOptions = validOptions.sort(() => Math.random() - 0.5);
+
+        validOptions.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = "text-left w-full px-6 py-4 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 hover:border-blue-300 font-medium text-slate-700 transition-all focus:outline-none";
+            btn.textContent = opt.txt;
+            
+            btn.onclick = () => {
+                // Prevent double clicking
+                Array.from(optsContainer.children).forEach(b => b.disabled = true);
+                
+                if (opt.isCorrect) {
+                    btn.className = "text-left w-full px-6 py-4 rounded-xl border-2 border-green-500 bg-green-50 font-bold text-green-800 transition-all";
+                    handleQuizWin(key);
+                } else {
+                    btn.className = "error-shake text-left w-full px-6 py-4 rounded-xl border-2 border-red-500 bg-red-50 font-medium text-red-800 transition-all";
+                    handleQuizLoss(key);
+                }
+            };
+            optsContainer.appendChild(btn);
+        });
+
+        mcPanel.classList.remove('hidden');
+        // Scroll slightly
+        setTimeout(() => mcPanel.classList.remove('translate-y-4', 'opacity-0'), 10);
+        mcPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function handleQuizWin(key) {
+        state.solvedKeys.add(key);
+        
+        // Update SVG permanently
+        const el = document.getElementById(key);
+        el.classList.add(heartData[key].solvedStyle);
+        if(key === 'pulmonary_veins') {
+            document.getElementById('pulmonary_veins_2').classList.add(heartData[key].solvedStyle);
+            document.getElementById('pulmonary_veins_3').classList.add(heartData[key].solvedStyle);
+            document.getElementById('pulmonary_veins_4').classList.add(heartData[key].solvedStyle);
+        }
+        
+        // Reveal label
+        const txtLabels = document.querySelectorAll(`.svg-label[data-part="${key}"]`);
+        txtLabels.forEach(txt => txt.classList.add('visible'));
+
+        // Update Progress
+        document.getElementById('solved-count').textContent = state.solvedKeys.size;
+        document.getElementById('progress-bar').style.width = `${(state.solvedKeys.size / 11) * 100}%`;
+
+        setTimeout(() => {
+            hideQuizContext();
+            
+            if (state.solvedKeys.size >= 11) {
+                // Game Over - Win
+                document.getElementById('completion-modal').classList.remove('hidden');
+                setTimeout(() => document.getElementById('modal-content').classList.remove('scale-95', 'opacity-0'), 50);
+            }
+        }, 1500);
+    }
+
+    function handleQuizLoss(key) {
+        // Progress to next question for this part, or loop
+        const data = heartData[key];
+        state.qIndex[key] = (state.qIndex[key] + 1) % data.questions.length;
+        
+        // After small delay, re-load quiz with NEW question
+        setTimeout(() => {
+            launchQuiz(key);
+        }, 1200);
+    }
+
+    function hideQuizContext() {
+        mcPanel.classList.add('translate-y-4', 'opacity-0');
+        setTimeout(() => {
+            mcPanel.classList.add('hidden');
+            state.mode = 'LABELING';
+            state.currentQuizKey = null;
+            renderWordBank();
+            showStatus('Great job! Select another term to continue.', 'text-green-700 bg-green-50');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 500);
+    }
+
+    function showStatus(text, classes) {
+        statusMsg.innerHTML = text;
+        statusMsg.className = `mt-8 text-center text-sm p-3 rounded-lg transition-all ${classes}`;
+        statusMsg.classList.remove('hidden');
+    }
+
+    function resetApp() {
+        state.mode = 'LABELING';
+        state.selectedWordKey = null;
+        state.solvedKeys.clear();
+        state.currentQuizKey = null;
+        
+        Object.keys(heartData).forEach(key => {
+            state.qIndex[key] = 0;
+            const el = document.getElementById(key);
+            el.classList.remove(heartData[key].solvedStyle, 'selected-pulse');
+            el.style.stroke = "";
+            if(key === 'pulmonary_veins') {
+                document.getElementById('pulmonary_veins_2').classList.remove(heartData[key].solvedStyle, 'selected-pulse');
+                document.getElementById('pulmonary_veins_3').classList.remove(heartData[key].solvedStyle, 'selected-pulse');
+                document.getElementById('pulmonary_veins_4').classList.remove(heartData[key].solvedStyle, 'selected-pulse');
+            }
+            
+            const txtLabels = document.querySelectorAll(`.svg-label[data-part="${key}"]`);
+            txtLabels.forEach(txt => txt.classList.remove('visible'));
+        });
+
+        document.getElementById('solved-count').textContent = "0";
+        document.getElementById('progress-bar').style.width = "0%";
+        
+        showStatus('Select a term to begin.', 'text-slate-500 bg-slate-100');
+        
+        document.getElementById('modal-content').classList.add('scale-95', 'opacity-0');
+        setTimeout(() => document.getElementById('completion-modal').classList.add('hidden'), 500);
+        
+        renderWordBank();
+    }
+
+    // Start
+    window.onload = init;
+
+</script>
+</body>
+</html>
