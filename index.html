@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heart Anatomy Explorer</title>
+    <!-- Tailwind via CDN for immediate execution without a build step -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Link our custom CSS -->
+    <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body class="bg-slate-50 text-slate-900 selection:bg-blue-200 selection:text-blue-900 pb-20 overflow-x-hidden">
+
+    <!-- Top Navigation Pattern / Header -->
+    <div class="absolute top-0 left-0 w-full h-72 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 -z-10 clip-path-header skew-y-1 transform origin-top-left translate-y-[-10%]"></div>
+    
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-8">
+        <header class="text-center md:text-left flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-white mb-2 drop-shadow-md">Heart Anatomy Explorer</h1>
+                <p class="text-lg text-indigo-200 font-medium">Alberta Biology 20 • Interactive Learning</p>
+            </div>
+            
+            <!-- Progress Tracker -->
+            <div class="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 shadow-xl min-w-[280px]">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-bold text-white uppercase tracking-wider">Mastery Sequence</span>
+                    <span class="text-sm font-bold text-indigo-200"><span id="solved-count">0</span> / <span id="total-count">12</span></span>
+                </div>
+                <div class="w-full bg-slate-900/50 rounded-full h-3 overflow-hidden shadow-inner border border-white/5">
+                    <div id="progress-bar" class="bg-gradient-to-r from-blue-400 to-emerald-400 h-full rounded-full transition-all duration-1000 ease-out w-0 relative">
+                        <div class="absolute inset-0 bg-white/20 w-full animate-pulse"></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <main class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start relative z-10">
+            
+            <!-- Interactive Canvas (Left / Top) -->
+            <div class="xl:col-span-8 bg-[#e8e0d9] rounded-[2rem] shadow-2xl border border-slate-200 p-4 md:p-8 flex justify-center relative min-h-[500px] xl:min-h-[700px] overflow-hidden group">
+                <!-- Background decorative elements -->
+                <div class="absolute -top-24 -left-24 w-64 h-64 bg-white/20 rounded-full blur-3xl blend-overlay pointer-events-none"></div>
+                <div class="absolute -bottom-24 -right-24 w-64 h-64 bg-rose-200/30 rounded-full blur-3xl blend-overlay pointer-events-none"></div>
+
+                <div class="relative w-full max-w-3xl select-none z-10 flex items-center justify-center">
+                    <!-- Base Diagram -->
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/e/e5/Diagram_of_the_human_heart_%28cropped%29.svg" alt="Heart Anatomy Background" class="w-full h-auto drop-shadow-2xl pointer-events-none opacity-90 transition-opacity duration-300 group-hover:opacity-100" />
+                    
+                    <!-- SVG Overlay corresponding exactly to the image -->
+                    <svg viewBox="0 0 400 400" class="absolute inset-0 w-full h-full z-20" preserveAspectRatio="xMidYMid meet">
+                        
+                        <!-- Superior Vena Cava -->
+                        <path id="superior_vena_cava" class="part" d="M 80 80 L 120 80 L 120 120 L 80 120 Z" />
+                        
+                        <!-- Inferior Vena Cava -->
+                        <path id="inferior_vena_cava" class="part" d="M 100 280 L 140 290 L 130 350 L 90 350 Z" />
+                        
+                        <!-- Right Atrium -->
+                        <path id="right_atrium" class="part" d="M 90 140 Q 60 180 80 230 L 130 230 L 140 180 Z" />
+                        
+                        <!-- Tricuspid Valve -->
+                        <rect id="tricuspid_valve" class="part" transform="rotate(-15 110 240)" x="100" y="235" width="40" height="15" rx="4" />
+                        
+                        <!-- Right Ventricle -->
+                        <path id="right_ventricle" class="part" d="M 90 250 Q 110 330 150 360 Q 180 370 200 360 L 170 250 Z" />
+                        
+                        <!-- Septum -->
+                        <path id="septum" class="part" d="M 175 220 L 210 220 L 220 370 L 190 365 Z" />
+                        
+                        <!-- Left Atrium -->
+                        <path id="left_atrium" class="part" d="M 230 160 Q 260 150 280 170 L 280 210 L 240 210 Z" />
+                        
+                        <!-- Bicuspid (Mitral) Valve -->
+                        <rect id="bicuspid_valve" class="part" transform="rotate(15 250 220)" x="235" y="215" width="45" height="15" rx="4" />
+                        
+                        <!-- Left Ventricle -->
+                        <path id="left_ventricle" class="part" d="M 220 230 L 280 230 Q 300 300 250 370 Q 230 390 210 380 L 200 365 L 220 360 Z" />
+                        
+                        <!-- Pulmonary Artery -->
+                        <path id="pulmonary_artery" class="part" d="M 150 200 Q 155 120 220 110 L 240 130 Q 180 140 180 200 Z M 220 110 L 270 110 L 270 140 L 240 130 Z" />
+
+                        <!-- Aorta -->
+                        <path id="aorta" class="part" d="M 180 130 Q 170 70 210 50 Q 250 40 280 80 L 250 100 Q 230 70 200 80 L 190 140 Z" />
+                        
+                        <!-- Pulmonary Veins -->
+                        <!-- Grouped visually in CSS, logically processed in JS by id matching -->
+                        <g id="pulmonary_veins">
+                            <path id="pulmonary_veins_1" class="part" d="M 285 155 L 320 155 L 320 175 L 285 175 Z" />
+                            <path id="pulmonary_veins_2" class="part" d="M 285 180 L 320 180 L 320 200 L 285 200 Z" />
+                            <path id="pulmonary_veins_3" class="part" d="M 80 155 L 50 155 L 50 175 L 80 175 Z" />
+                            <path id="pulmonary_veins_4" class="part" d="M 80 180 L 50 180 L 50 200 L 80 200 Z" />
+                        </g>
+
+                        <!-- Labels revealed on success -->
+                        <text x="75" y="195" class="svg-label" data-part="right_atrium">Right Atrium</text>
+                        <text x="120" y="320" class="svg-label" data-part="right_ventricle">Right Ventricle</text>
+                        <text x="250" y="180" class="svg-label" data-part="left_atrium">Left Atrium</text>
+                        <text x="240" y="320" class="svg-label" data-part="left_ventricle">Left Ventricle</text>
+                        <text x="195" y="270" class="svg-label" data-part="septum" writing-mode="vertical-rl">Septum</text>
+                        
+                        <text x="95" y="70" class="svg-label" data-part="superior_vena_cava" font-size="11">Superior Vena Cava</text>
+                        <text x="105" y="370" class="svg-label" data-part="inferior_vena_cava" font-size="11">Inferior Vena Cava</text>
+                        
+                        <text x="210" y="35" class="svg-label" data-part="aorta">Aorta</text>
+                        <text x="180" y="105" class="svg-label" data-part="pulmonary_artery">Pulm. Artery</text>
+                        <text x="290" y="145" class="svg-label" data-part="pulmonary_veins">Pulm. Veins</text>
+                        <text x="80" y="250" class="svg-label" data-part="tricuspid_valve" font-size="10">Tricuspid</text>
+                        <text x="260" y="240" class="svg-label" data-part="bicuspid_valve" font-size="10">Bicuspid</text>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Command Center Sidebar -->
+            <div class="xl:col-span-4 flex flex-col gap-6 h-full">
+                
+                <!-- Word Bank Panel -->
+                <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 p-8 flex flex-col flex-grow">
+                    
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-2xl justify-self-start font-bold text-slate-800">Terminology Bank</h2>
+                        <div class="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        </div>
+                    </div>
+                    
+                    <p class="text-slate-500 mb-8 pb-6 border-b border-slate-100 font-medium">Identify a structure by selecting its label below, then locate it directly on the anatomical model.</p>
+                    
+                    <div id="word-bank" class="flex flex-wrap gap-2.5">
+                        <!-- Loaded by JS -->
+                    </div>
+                    
+                </div>
+                
+                <!-- Status Message Display -->
+                <div id="status-section" class="w-full">
+                    <div id="status-message" class="w-full max-w-xl mx-auto rounded-2xl border p-4 text-center font-medium shadow-sm transition-all duration-300 text-slate-500 bg-slate-50 border-slate-200">
+                        Select a term to begin.
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Fullscreen Quiz Modal Overlay -->
+    <div id="quiz-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-md transition-opacity duration-300 opacity-0 flex items-center justify-center p-4">
+        
+        <div class="bg-white rounded-[2.5rem] shadow-2xl max-w-2xl w-full mx-auto transform transition-all duration-400 scale-95 translate-y-8 overflow-hidden">
+            
+            <!-- Modal Header -->
+            <div class="px-8 py-6 border-b border-slate-100 bg-slate-50/50 flex items-center gap-4">
+                <div id="quiz-icon" class="flex h-12 w-12 items-center justify-center rounded-2xl text-2xl shadow-inner text-white">🫀</div>
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Structure Defeated</h4>
+                    <h3 id="quiz-title" class="text-2xl font-bold text-slate-800 tracking-tight">Part Name</h3>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-8">
+                <p id="quiz-text" class="text-lg font-semibold text-slate-800 leading-relaxed mb-8">
+                    Question text goes here?
+                </p>
+                
+                <div id="quiz-options" class="flex flex-col gap-3">
+                    <!-- Buttons injected by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Victory Modal -->
+    <div id="completion-modal" class="fixed inset-0 z-[60] hidden bg-slate-900/80 backdrop-blur-lg flex items-center justify-center p-4 transition-opacity duration-500 opacity-0">
+        <div class="bg-white rounded-[3rem] shadow-2xl p-10 max-w-lg w-full text-center transform transition-all duration-500 scale-95 translate-y-8 absolute">
+            <div class="text-7xl mb-6 inline-block drop-shadow-lg">🎓</div>
+            <h2 class="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">Assessment Complete!</h2>
+            <p class="text-slate-600 text-lg mb-10 font-medium">Outstanding work. You have mastered the comprehensive anatomy and sequential functions of the human heart.</p>
+            <button onclick="resetApp()" class="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-2xl shadow-xl shadow-blue-500/30 hover:shadow-blue-500/50 transition-all focus:ring-4 focus:ring-blue-500/50 focus:outline-none">
+                Reinitialize Simulation
+            </button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="./js/data.js"></script>
+    <script src="./js/app.js"></script>
+</body>
+</html>
